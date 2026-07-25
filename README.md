@@ -33,24 +33,22 @@ model then follows autonomously.
 
 ## How it works
 
-```
-PDF (data/)
-   │  ingest.py
-   ▼
-Page-based chunking (with overlap) + metadata (source file, page number)
-   │
-   ▼
-ChromaDB (local, persistent vector store, local embedding model)
-   │
-   ▼
-retrieve_documents tool (tools.py)
-   │  exposed to the agent via an in-process MCP server
-   ▼
-Claude Agent SDK (main.py)
-   │  system prompt decides WHEN to call the tool
-   │  cites (source, page) in every retrieval-based answer
-   ▼
-CLI chat interface
+```mermaid
+flowchart TD
+    subgraph Ingest["Offline: ingest.py"]
+        PDF[PDF in data/] --> Chunk[Page-based chunking + overlap]
+        Chunk --> Store[(ChromaDB<br/>local vector store)]
+    end
+
+    subgraph Runtime["Runtime"]
+        User[User: CLI or Web UI] --> Agent[Claude Agent SDK<br/>system prompt decides]
+        Agent -- "needs course info?" --> Tool[retrieve_documents tool<br/>via in-process MCP server]
+        Tool --> Store
+        Store -- "chunks + distance score" --> Tool
+        Tool --> Agent
+        Agent -- "weak match?" --> Agent
+        Agent -- "answer + Source, page N" --> User
+    end
 ```
 
 ## Tech stack
@@ -71,6 +69,7 @@ CLI chat interface
 ├── ingest.py             # load PDFs -> chunk -> embed -> store in ChromaDB
 ├── tools.py              # retrieve_documents tool, exposed via an in-process MCP server
 ├── main.py                # CLI chat loop using the Claude Agent SDK
+├── app.py                 # Gradio web chat interface
 └── requirements.txt
 ```
 
@@ -120,28 +119,3 @@ Assistant: The capital of France is Paris.
 Note: this is general knowledge and isn't drawn from the ingested course
 materials, which cover syllabus/course documentation.
 ```
-
-## Current status
-
-This is an early-stage MVP. Working end to end:
-
-- [x] Upload and process PDF documents
-- [x] Split documents into meaningful sections (page-based chunking with overlap)
-- [x] Create embeddings (local, via ChromaDB's default embedding model)
-- [x] Store them in a vector database
-- [x] Retrieve relevant sections on demand
-- [x] Generate an answer, deciding autonomously whether retrieval is needed
-- [x] Show the source document and page for every retrieval-based answer
-
-## Roadmap
-
-- [ ] Query rewriting for vague or ambiguous questions
-- [ ] Self-check of retrieved-context relevance, with re-search when evidence is weak
-- [ ] Web UI (currently CLI-only)
-- [ ] Architecture diagram
-- [ ] Demo video
-- [ ] Evaluation results
-- [ ] Cost and latency measurements
-- [ ] Documented failure cases
-- [ ] Security considerations
-- [ ] Live deployment
