@@ -23,13 +23,14 @@ async def retrieve_documents(args):
 
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
+    distances = results["distances"][0]
 
     if not documents:
         return {"content": [{"type": "text", "text": "No relevant documents found."}]}
 
     formatted = [
-        f"[Source: {meta['source']}, page {meta['page']}]\n{doc}"
-        for doc, meta in zip(documents, metadatas)
+        f"[Source: {meta['source']}, page {meta['page']}, distance: {dist:.2f} (lower = closer match)]\n{doc}"
+        for doc, meta, dist in zip(documents, metadatas, distances)
     ]
     return {"content": [{"type": "text", "text": "\n\n---\n\n".join(formatted)}]}
 
